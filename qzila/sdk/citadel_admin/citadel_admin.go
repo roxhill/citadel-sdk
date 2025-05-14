@@ -1,4 +1,4 @@
-package citadel
+package admin
 
 import (
 	"bytes"
@@ -8,560 +8,148 @@ import (
 	"net/http"
 )
 
+const SDKVersion = "admin-2.0.0-go"
+
 const (
-	createUserAction            = "/users.create"
-	getUserAction               = "/users.get"
-	deleteUserAction            = "/users.delete"
-	listUsersAction             = "/users.list"
-	updateUserAction            = "/users.update"
-	setUserPasswordAction       = "/users.setPassword"
-	changeUserPasswordAction    = "/users.changePassword"
-	getUserMetadataAction       = "/users.metadata.get"
-	setUserMetadataAction       = "/users.metadata.set"
-	deleteUserMetadataAction    = "/users.metadata.delete"
-	adminMigrateUsersAction     = "/users.adminMigrateUsers"
-	adminImpersonateStartAction = "/users.adminImpersonate"
-	adminImpersonateStopAction  = "/users.adminStopImpersonating"
+	actionUserGet            = "/users.get"
+	actionUserCreate         = "/users.create"
+	actionUserUpdate         = "/users.update"
+	actionUserDelete         = "/users.delete"
+	actionUserList           = "/users.list"
+	actionUserSetPassword    = "/users.setPassword"
+	actionUserChangePassword = "/users.changePassword"
+	actionUserMetadataGet    = "/users.metadata.get"
+	actionUserMetadataSet    = "/users.metadata.set"
+	actionUserMetadataDelete = "/users.metadata.delete"
+	actionMigrateUsers       = "/users.adminMigrateUsers"
+	actionImpersonateStart   = "/users.adminImpersonate"
+	actionImpersonateStop    = "/users.adminStopImpersonating"
 )
 
 const (
-	UserActive   = "active"
-	UserDisabled = "disabled"
-	UserLocked   = "locked"
+	secondFactorEmail = "emailCode"
+	secondFactorSMS   = "smsCode"
 )
 
 const (
-	SecondFactorEmail = "emailCode"
-	SecondFactorSms   = "smsCode"
+	languageEn = "en"
 )
 
 const (
-	LanguageEn = "en"
+	passwordAlgorithmBcrypt = "bcrypt"
+	passwordAlgorithmSHA512 = "sha512"
 )
 
-const (
-	BcryptPasswordAlgorithm = "bcrypt"
-	Sha512PasswordAlgorithm = "sha512"
-)
+type Client interface {
+	CreateUser(req *CreateUserRequest) (*UserResponse, error)
+	GetUser(req *GetUserRequest) (*UserResponse, error)
+	DeleteUser(request *DeleteUserRequest) (*ActionStatusResponse, error)
+	ListUsers(request *ListUsersRequest) (*ListUsersResponse, error)
+	UpdateUser(request *UpdateUserRequest) (*UserResponse, error)
+	SetUserPassword(request *SetUserPasswordRequest) (*ActionStatusResponse, error)
+	ChangeUserPassword(request *ChangeUserPasswordRequest) (*ActionStatusResponse, error)
+	GetAllUserMetadata(request *GetAllUserMetadataRequest) (*GetAllUserMetadataResponse, error)
+	SetUserMetadata(request *SetUserMetadataRequest) (*ActionStatusResponse, error)
+	DeleteUserMetadata(request *DeleteUserMetadataRequest) (*ActionStatusResponse, error)
+	MigrateBcryptUsers(request *MigrateBcryptUsersRequest) (*MigrateUsersResponse, error)
+	MigrateSha512Users(request *MigrateSha512UsersRequest) (*MigrateUsersResponse, error)
+	ImpersonateStart(request *ImpersonateStartRequest) (*ImpersonateStartResponse, error)
+	ImpersonateStop(request *ImpersonateStopRequest) (*ImpersonateStopResponse, error)
+}
 
 type UserResponse struct {
-	UserId            string   `json:"id"`
+	UserID            string   `json:"id"`
 	Status            string   `json:"status"`
 	Username          string   `json:"username"`
 	EmailAddress      string   `json:"emailAddress"`
-	DisableMfa        bool     `json:"disableMfa"`
-	AllowedMfaMethods []string `json:"allowedMfaMethods"`
+	DisableMFA        bool     `json:"disableMfa"`
+	AllowedMFAMethods []string `json:"allowedMfaMethods"`
 	Language          string   `json:"language"`
 	PhoneNumber       string   `json:"phoneNumber"`
 }
 
-type CreateUserRequest struct {
-	UserId       string `json:"userId"`
-	Username     string `json:"username"`
-	EmailAddress string `json:"emailAddress"`
-	Status       string `json:"status"`
-	Language     string `json:"language"`
-	Password     string `json:"password"`
-}
-
-type CreateUserResponse struct {
-	User UserResponse `json:"user"`
-}
-
-func (c *client) CreateUser(request *CreateUserRequest) (*CreateUserResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(createUserAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &CreateUserResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type GetUserRequest struct {
-	UserId string `json:"userId"`
-}
-
-func (c *client) GetUser(request *GetUserRequest) (*UserResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal user: %v", err)
-	}
-
-	responseBody, err := c.request(getUserAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch the user: %v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &UserResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type DeleteUserRequest struct {
-	UserId string `json:"userId"`
-}
-
-type DeleteUserResponse struct {
+type ActionStatusResponse struct {
 	Status string `json:"status"`
-}
-
-func (c *client) DeleteUser(request *DeleteUserRequest) (*DeleteUserResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(deleteUserAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &DeleteUserResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type ListUsersRequest struct {
-	Cursor string `json:"cursor,omitempty"`
-	Limit  int    `json:"limit"`
-}
-
-type ListUsersResponse struct {
-	Users  []UserResponse `json:"items"`
-	Cursor string         `json:"cursor,omitempty"`
-}
-
-func (c *client) ListUsers(request *ListUsersRequest) (*ListUsersResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(listUsersAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &ListUsersResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type UpdateUserRequest struct {
-	UserId            string   `json:"userId"`
-	Username          string   `json:"username,omitempty"`
-	EmailAddress      string   `json:"emailAddress,omitempty"`
-	PhoneNumber       string   `json:"phoneNumber,omitempty"`
-	Status            string   `json:"status,omitempty"`
-	DisableMfa        *bool    `json:"disableMfa,omitempty"`
-	AllowedMfaMethods []string `json:"allowedMfaMethods,omitempty"`
-}
-
-func (c *client) UpdateUser(request *UpdateUserRequest) (*UserResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(updateUserAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &UserResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type SetUserPasswordRequest struct {
-	UserId   string `json:"userId"`
-	Password string `json:"password"`
-}
-
-type SetUserPasswordResponse struct {
-	Status string `json:"status"`
-}
-
-func (c *client) SetUserPassword(request *SetUserPasswordRequest) (*SetUserPasswordResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(setUserPasswordAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &SetUserPasswordResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type ChangeUserPasswordRequest struct {
-	UserId      string `json:"userId"`
-	OldPassword string `json:"oldPassword"`
-	NewPassword string `json:"newPassword"`
-}
-
-type ChangeUserPasswordResponse struct {
-	Status string `json:"status"`
-}
-
-func (c *client) ChangeUserPassword(request *ChangeUserPasswordRequest) (*ChangeUserPasswordResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(changeUserPasswordAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &ChangeUserPasswordResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type GetAllUserMetadataRequest struct {
-	UserId string `json:"userId"`
-}
-
-type GetAllUserMetadataResponse struct {
-	Items []MetadataItem `json:"items"`
-}
-
-type MetadataItem struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-func (c *client) GetAllUserMetadata(request *GetAllUserMetadataRequest) (*GetAllUserMetadataResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(getUserMetadataAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &GetAllUserMetadataResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type SetUserMetadataRequest struct {
-	UserId   string         `json:"userId"`
-	Metadata []MetadataItem `json:"metadata"`
-}
-
-type SetUserMetadataResponse struct {
-	Status string `json:"status"`
-}
-
-func (c *client) SetUserMetadata(request *SetUserMetadataRequest) (*SetUserMetadataResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(setUserMetadataAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &SetUserMetadataResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type DeleteUserMetadataRequest struct {
-	UserId   string   `json:"userId"`
-	Metadata []string `json:"metadata"`
-}
-
-type DeleteUserMetadataResponse struct {
-	Status string `json:"status"`
-}
-
-func (c *client) DeleteUserMetadata(request *DeleteUserMetadataRequest) (*DeleteUserMetadataResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(deleteUserMetadataAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &DeleteUserMetadataResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type AdminMigrateBcryptUsersRequest struct {
-	Items []BcryptUserMigrationRequest `json:"items"`
-}
-
-type BcryptUserMigrationRequest struct {
-	UserId       string         `json:"userId"`
-	Username     string         `json:"username"`
-	EmailAddress string         `json:"emailAddress"`
-	PhoneNumber  string         `json:"phoneNumber,omitempty"`
-	Status       string         `json:"status"`
-	Password     BcryptPassword `json:"password"`
-	Language     string         `json:"language"`
-	DisableMfa   bool           `json:"disableMfa"`
-}
-
-type BcryptPassword struct {
-	Algorithm string `json:"alg"`
-	Hash      string `json:"hash"`
-}
-
-type AdminMigrateUsersResponse struct {
-	Items []UserId `json:"items"`
-}
-
-type UserId struct {
-	UserId string `json:"userId"`
-}
-
-func (c *client) AdminMigrateBcryptUsers(request *AdminMigrateBcryptUsersRequest) (*AdminMigrateUsersResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(adminMigrateUsersAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &AdminMigrateUsersResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type AdminMigrateSha512UsersRequest struct {
-	Items []Sha512UserMigrationRequest `json:"items"`
-}
-
-type Sha512UserMigrationRequest struct {
-	UserId       string         `json:"userId"`
-	Username     string         `json:"username"`
-	EmailAddress string         `json:"emailAddress"`
-	PhoneNumber  string         `json:"phoneNumber,omitempty"`
-	Status       string         `json:"status"`
-	Password     Sha512Password `json:"password"`
-	Language     string         `json:"language"`
-	DisableMfa   bool           `json:"disableMfa"`
-}
-
-type Sha512Password struct {
-	Algorithm  string `json:"alg"`
-	Hash       string `json:"hash"`
-	Salt       string `json:"salt"`
-	Iterations int    `json:"iterations"`
-}
-
-func (c *client) AdminMigrateSha512Users(request *AdminMigrateSha512UsersRequest) (*AdminMigrateUsersResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(adminMigrateUsersAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &AdminMigrateUsersResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type AdminImpersonateStartRequest struct {
-	Sid    string `json:"sid"`
-	UserId string `json:"userId"`
-}
-
-type AdminImpersonateStartResponse struct {
-	Status string `json:"status"`
-}
-
-func (c *client) AdminImpersonateStart(request *AdminImpersonateStartRequest) (*AdminImpersonateStartResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(adminImpersonateStartAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &AdminImpersonateStartResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type AdminImpersonateStopRequest struct {
-	Sid string `json:"sid"`
-}
-
-type AdminImpersonateStopResponse struct {
-	Status string `json:"status"`
-}
-
-func (c *client) AdminImpersonateStop(request *AdminImpersonateStopRequest) (*AdminImpersonateStopResponse, error) {
-	requestBody, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %v", err)
-	}
-
-	responseBody, err := c.request(adminImpersonateStopAction, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, fmt.Errorf("%v", err)
-	}
-
-	defer responseBody.Close()
-
-	response := &AdminImpersonateStopResponse{}
-	err = json.NewDecoder(responseBody).Decode(response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
-	}
-
-	return response, nil
-}
-
-type Client interface {
-	CreateUser(request *CreateUserRequest) (*CreateUserResponse, error)
-	GetUser(request *GetUserRequest) (*UserResponse, error)
-	DeleteUser(request *DeleteUserRequest) (*DeleteUserResponse, error)
-	ListUsers(request *ListUsersRequest) (*ListUsersResponse, error)
-	UpdateUser(request *UpdateUserRequest) (*UserResponse, error)
-	SetUserPassword(request *SetUserPasswordRequest) (*SetUserPasswordResponse, error)
-	ChangeUserPassword(request *ChangeUserPasswordRequest) (*ChangeUserPasswordResponse, error)
-	GetAllUserMetadata(request *GetAllUserMetadataRequest) (*GetAllUserMetadataResponse, error)
-	SetUserMetadata(request *SetUserMetadataRequest) (*SetUserMetadataResponse, error)
-	DeleteUserMetadata(request *DeleteUserMetadataRequest) (*DeleteUserMetadataResponse, error)
-	AdminMigrateBcryptUsers(request *AdminMigrateBcryptUsersRequest) (*AdminMigrateUsersResponse, error)
-	AdminMigrateSha512Users(request *AdminMigrateSha512UsersRequest) (*AdminMigrateUsersResponse, error)
-	AdminImpersonateStart(request *AdminImpersonateStartRequest) (*AdminImpersonateStartResponse, error)
-	AdminImpersonateStop(request *AdminImpersonateStopRequest) (*AdminImpersonateStopResponse, error)
 }
 
 type client struct {
-	baseUrl      string
-	client       *http.Client
-	apiKey       string
-	preSharedKey string
+	baseURL string
+	client  *http.Client
+	apiKey  string
 }
 
-type ClientConfig struct {
-	BaseUrl      string
-	ApiKey       string
-	PreSharedKey string
-}
-
-func NewClient(config *ClientConfig) Client {
-	return &client{
-		baseUrl:      config.BaseUrl,
-		client:       &http.Client{},
-		apiKey:       config.ApiKey,
-		preSharedKey: config.PreSharedKey,
+func (c *client) request(action string, body io.Reader) (io.ReadCloser, error) {
+	req, err := http.NewRequest("POST", c.baseURL+action, body)
+	if err != nil {
+		return nil, err
 	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", c.apiKey)
+	req.Header.Set("X-SDK-Version", SDKVersion)
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle Api Gateway errors
+	if res.StatusCode == http.StatusInternalServerError ||
+		res.StatusCode == http.StatusServiceUnavailable ||
+		res.StatusCode == http.StatusGatewayTimeout ||
+		res.StatusCode == http.StatusBadGateway ||
+		res.StatusCode == http.StatusUnauthorized ||
+		res.StatusCode == http.StatusForbidden {
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err == nil {
+			err := &ErrUnexpected{
+				Message: fmt.Sprintf("HTTP %d - API error: %v", res.StatusCode, string(bodyBytes)),
+			}
+
+			return nil, err
+		}
+
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		errorResponse := &ErrorResponse{}
+
+		// Decode the error response
+		err = json.NewDecoder(res.Body).Decode(errorResponse)
+		if err != nil {
+			return nil, err
+		}
+
+		// Check the error type and return the appropriate error
+		switch errorResponse.Message.Type {
+		case "configError":
+			return nil, &ErrInvalidConfig{errorResponse.Message.Message}
+		case "bearerMalformed":
+			return nil, &ErrBearerMalformed{errorResponse.Message.Message}
+		case "userDeleteFailed":
+			return nil, &ErrUserDeleteFailed{errorResponse.Message.Message}
+		case "passwordInvalid":
+			return nil, &ErrPasswordInvalid{errorResponse.Message.Message}
+		case "userAlreadyImpersonated":
+			return nil, &ErrUserAlreadyImpersonated{errorResponse.Message.Message}
+		case "userNotImpersonated":
+			return nil, &ErrUserNotImpersonated{errorResponse.Message.Message}
+		case "notFound":
+			return nil, &ErrNotFound{errorResponse.Message.Message}
+		case "usernameAlreadyTaken":
+			return nil, &ErrUsernameAlreadyTaken{errorResponse.Message.Message}
+		case "userAlreadyExists":
+			return nil, &ErrUserAlreadyExists{errorResponse.Message.Message}
+		case "bearerExpired":
+			return nil, &ErrBearerTokenExpired{errorResponse.Message.Message}
+		case "sessionInvalid":
+			return nil, &ErrSessionInvalid{errorResponse.Message.Message}
+		default:
+			return nil, &ErrUnexpected{fmt.Sprintf("Unexpected error.\nType: %v\nMessage: %v", errorResponse.Message.Type, errorResponse.Message.Message)}
+		}
+	}
+
+	return res.Body, nil
 }
 
 type CitadelError struct {
@@ -574,172 +162,386 @@ type ErrorResponse struct {
 	Message CitadelError `json:"error"`
 }
 
-func (c *client) request(action string, body io.Reader) (io.ReadCloser, error) {
-	req, err := http.NewRequest("POST", c.baseUrl+action, body)
+type ErrUnexpected struct {
+	Message string
+}
+
+func (e *ErrUnexpected) Error() string {
+	return e.Message
+}
+
+type ErrInvalidConfig struct {
+	Message string
+}
+
+func (e *ErrInvalidConfig) Error() string {
+	return e.Message
+}
+
+type ErrBearerMalformed struct {
+	Message string
+}
+
+func (e *ErrBearerMalformed) Error() string {
+	return e.Message
+}
+
+type ErrUserDeleteFailed struct {
+	Message string
+}
+
+func (e *ErrUserDeleteFailed) Error() string {
+	return e.Message
+}
+
+type ErrPasswordInvalid struct {
+	Message string
+}
+
+func (e *ErrPasswordInvalid) Error() string {
+	return e.Message
+}
+
+type ErrUserAlreadyImpersonated struct {
+	Message string
+}
+
+func (e *ErrUserAlreadyImpersonated) Error() string {
+	return e.Message
+}
+
+type ErrUserNotImpersonated struct {
+	Message string
+}
+
+func (e *ErrUserNotImpersonated) Error() string {
+	return e.Message
+}
+
+type ErrNotFound struct {
+	Message string
+}
+
+func (e *ErrNotFound) Error() string {
+	return e.Message
+}
+
+type ErrUsernameAlreadyTaken struct {
+	Message string
+}
+
+func (e *ErrUsernameAlreadyTaken) Error() string {
+	return e.Message
+}
+
+type ErrUserAlreadyExists struct {
+	Message string
+}
+
+func (e *ErrUserAlreadyExists) Error() string {
+	return e.Message
+}
+
+type ErrBearerTokenExpired struct {
+	Message string
+}
+
+func (e *ErrBearerTokenExpired) Error() string {
+	return e.Message
+}
+
+type ErrSessionInvalid struct {
+	Message string
+}
+
+func (e *ErrSessionInvalid) Error() string {
+	return e.Message
+}
+
+type ClientConfig struct {
+	BaseURL string
+	APIKey  string
+}
+
+func NewClient(config *ClientConfig) Client {
+	return &client{
+		baseURL: config.BaseURL,
+		client:  &http.Client{},
+		apiKey:  config.APIKey,
+	}
+}
+
+type CreateUserRequest struct {
+	UserID       string `json:"userId"`
+	Username     string `json:"username"`
+	EmailAddress string `json:"emailAddress"`
+	Language     string `json:"language"`
+	Password     string `json:"password"`
+}
+
+type CreateUserResponse struct {
+	User UserResponse `json:"user"`
+}
+
+func (c *client) CreateUser(req *CreateUserRequest) (*UserResponse, error) {
+	return sendRequest(c, actionUserGet, req, func() *UserResponse {
+		return &UserResponse{}
+	})
+}
+
+type GetUserRequest struct {
+	UserID string `json:"userId"`
+}
+
+func (c *client) GetUser(req *GetUserRequest) (*UserResponse, error) {
+	return sendRequest(c, actionUserGet, req, func() *UserResponse {
+		return &UserResponse{}
+	})
+}
+
+type DeleteUserRequest struct {
+	UserID string `json:"userId"`
+}
+
+func (c *client) DeleteUser(req *DeleteUserRequest) (*ActionStatusResponse, error) {
+	return sendRequest(c, actionUserDelete, req, func() *ActionStatusResponse {
+		return &ActionStatusResponse{}
+	})
+}
+
+type ListUsersRequest struct {
+	Cursor string `json:"cursor,omitempty"`
+	Limit  int    `json:"limit"`
+}
+
+type ListUsersResponse struct {
+	Users  []UserResponse `json:"items"`
+	Cursor string         `json:"cursor,omitempty"`
+}
+
+func (c *client) ListUsers(req *ListUsersRequest) (*ListUsersResponse, error) {
+	return sendRequest(c, actionUserList, req, func() *ListUsersResponse {
+		return &ListUsersResponse{}
+	})
+}
+
+type UpdateUserRequest struct {
+	UserID            string   `json:"userId"`
+	Username          string   `json:"username,omitempty"`
+	EmailAddress      string   `json:"emailAddress,omitempty"`
+	PhoneNumber       string   `json:"phoneNumber,omitempty"`
+	DisableMFA        *bool    `json:"disableMfa,omitempty"`
+	AllowedMFAMethods []string `json:"allowedMfaMethods,omitempty"`
+}
+
+func (c *client) UpdateUser(req *UpdateUserRequest) (*UserResponse, error) {
+	return sendRequest(c, actionUserUpdate, req, func() *UserResponse {
+		return &UserResponse{}
+	})
+}
+
+type SetUserPasswordRequest struct {
+	UserID   string `json:"userId"`
+	Password string `json:"password"`
+}
+
+func (c *client) SetUserPassword(req *SetUserPasswordRequest) (*ActionStatusResponse, error) {
+	return sendRequest(c, actionUserSetPassword, req, func() *ActionStatusResponse {
+		return &ActionStatusResponse{}
+	})
+}
+
+type ChangeUserPasswordRequest struct {
+	UserID      string `json:"userId"`
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword"`
+}
+
+func (c *client) ChangeUserPassword(req *ChangeUserPasswordRequest) (*ActionStatusResponse, error) {
+	return sendRequest(c, actionUserChangePassword, req, func() *ActionStatusResponse {
+		return &ActionStatusResponse{}
+	})
+}
+
+type GetAllUserMetadataRequest struct {
+	UserID string `json:"userId"`
+}
+
+type GetAllUserMetadataResponse struct {
+	Items []MetadataItem `json:"items"`
+}
+
+type MetadataItem struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+func (c *client) GetAllUserMetadata(req *GetAllUserMetadataRequest) (*GetAllUserMetadataResponse, error) {
+	return sendRequest(c, actionUserMetadataGet, req, func() *GetAllUserMetadataResponse {
+		return &GetAllUserMetadataResponse{}
+	})
+}
+
+type SetUserMetadataRequest struct {
+	UserID   string         `json:"userId"`
+	Metadata []MetadataItem `json:"metadata"`
+}
+
+func (c *client) SetUserMetadata(req *SetUserMetadataRequest) (*ActionStatusResponse, error) {
+	return sendRequest(c, actionUserMetadataSet, req, func() *ActionStatusResponse {
+		return &ActionStatusResponse{}
+	})
+}
+
+type DeleteUserMetadataRequest struct {
+	UserID   string   `json:"userId"`
+	Metadata []string `json:"metadata"`
+}
+
+func (c *client) DeleteUserMetadata(req *DeleteUserMetadataRequest) (*ActionStatusResponse, error) {
+	return sendRequest(c, actionUserMetadataDelete, req, func() *ActionStatusResponse {
+		return &ActionStatusResponse{}
+	})
+}
+
+type MigrateBcryptUsersRequest struct {
+	Items []BcryptUserMigrationRequest `json:"items"`
+}
+
+type BcryptUserMigrationRequest struct {
+	UserID       string         `json:"userId"`
+	Username     string         `json:"username"`
+	EmailAddress string         `json:"emailAddress"`
+	PhoneNumber  string         `json:"phoneNumber,omitempty"`
+	Password     BcryptPassword `json:"password"`
+	Language     string         `json:"language"`
+	DisableMFA   bool           `json:"disableMfa"`
+}
+
+type BcryptPassword struct {
+	Algorithm string `json:"alg"`
+	Hash      string `json:"hash"`
+}
+
+type MigrateUsersResponse struct {
+	Items []UserID `json:"items"`
+}
+
+type UserID struct {
+	UserID string `json:"userId"`
+}
+
+func (c *client) MigrateBcryptUsers(req *MigrateBcryptUsersRequest) (*MigrateUsersResponse, error) {
+	return sendRequest(c, actionMigrateUsers, req, func() *MigrateUsersResponse {
+		return &MigrateUsersResponse{}
+	})
+}
+
+type MigrateSha512UsersRequest struct {
+	Items []Sha512UserMigrationRequest `json:"items"`
+}
+
+type Sha512UserMigrationRequest struct {
+	UserID       string         `json:"userId"`
+	Username     string         `json:"username"`
+	EmailAddress string         `json:"emailAddress"`
+	PhoneNumber  string         `json:"phoneNumber,omitempty"`
+	Password     Sha512Password `json:"password"`
+	Language     string         `json:"language"`
+	DisableMFA   bool           `json:"disableMfa"`
+}
+
+type Sha512Password struct {
+	Algorithm  string `json:"alg"`
+	Hash       string `json:"hash"`
+	Salt       string `json:"salt"`
+	Iterations int    `json:"iterations"`
+}
+
+func (c *client) MigrateSha512Users(req *MigrateSha512UsersRequest) (*MigrateUsersResponse, error) {
+	return sendRequest(c, actionMigrateUsers, req, func() *MigrateUsersResponse {
+		return &MigrateUsersResponse{}
+	})
+}
+
+type ImpersonateStartRequest struct {
+	SessionID string `json:"sessionId"`
+	UserID    string `json:"userId"`
+}
+
+type ImpersonateStartResponse struct {
+	SetCookies []string `json:"setCookies"`
+}
+
+func (c *client) ImpersonateStart(req *ImpersonateStartRequest) (*ImpersonateStartResponse, error) {
+	return sendRequest(c, actionImpersonateStart, req, func() *ImpersonateStartResponse {
+		return &ImpersonateStartResponse{}
+	})
+}
+
+type ImpersonateStopRequest struct {
+	SessionID string `json:"sessionId"`
+}
+
+type ImpersonateStopResponse struct {
+	SetCookies []string `json:"setCookies"`
+}
+
+func (c *client) ImpersonateStop(req *ImpersonateStopRequest) (*ImpersonateStopResponse, error) {
+	return sendRequest(c, actionImpersonateStop, req, func() *ImpersonateStopResponse {
+		return &ImpersonateStopResponse{}
+	})
+}
+
+type CitadelAdminRequest interface {
+	*CreateUserRequest |
+		*GetUserRequest |
+		*DeleteUserRequest |
+		*UpdateUserRequest |
+		*ListUsersRequest |
+		*SetUserPasswordRequest |
+		*ChangeUserPasswordRequest |
+		*GetAllUserMetadataRequest |
+		*SetUserMetadataRequest |
+		*DeleteUserMetadataRequest |
+		*MigrateBcryptUsersRequest |
+		*MigrateSha512UsersRequest |
+		*ImpersonateStartRequest |
+		*ImpersonateStopRequest
+}
+
+type CitadelAdminResponse interface {
+	*UserResponse |
+		*ActionStatusResponse |
+		*ListUsersResponse |
+		*GetAllUserMetadataResponse |
+		*MigrateUsersResponse |
+		*ImpersonateStartResponse |
+		*ImpersonateStopResponse
+}
+
+func sendRequest[RQ CitadelAdminRequest, RS CitadelAdminResponse](
+	c *client,
+	action string,
+	req RQ,
+	newRS func() RS,
+) (res RS, err error) {
+	reqBody, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", c.apiKey)
-	req.Header.Set("x-sdk-version", "0.10.1-go")
+	buf := bytes.NewBuffer(reqBody)
 
-	resp, err := c.client.Do(req)
+	resBody, err := c.request(action, buf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to perform action \"%s\": %w", action, err)
 	}
+	defer resBody.Close()
 
-	// Handle Api Gateway errors
-	if resp.StatusCode == http.StatusInternalServerError ||
-		resp.StatusCode == http.StatusServiceUnavailable ||
-		resp.StatusCode == http.StatusGatewayTimeout ||
-		resp.StatusCode == http.StatusBadGateway ||
-		resp.StatusCode == http.StatusUnauthorized ||
-		resp.StatusCode == http.StatusForbidden {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err == nil {
-			err := &UnexpectedError{
-				Message: fmt.Sprintf("HTTP %d - API error: %v", resp.StatusCode, string(bodyBytes)),
-			}
-
-			return nil, err
-		}
-
-		return nil, err
+	res = newRS()
+	err = json.NewDecoder(resBody).Decode(res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		errorResponse := &ErrorResponse{}
-
-		// Decode the error response
-		err = json.NewDecoder(resp.Body).Decode(errorResponse)
-		if err != nil {
-			return nil, err
-		}
-
-		// Check the error type and return the appropriate error
-		switch errorResponse.Message.Type {
-		case "configError":
-			return nil, &ConfigError{Message: errorResponse.Message.Message}
-		case "bearerMalformed":
-			return nil, &BearerMalformedError{Message: errorResponse.Message.Message}
-		case "userDeleteFailed":
-			return nil, &UserDeleteFailedError{Message: errorResponse.Message.Message}
-		case "passwordInvalid":
-			return nil, &PasswordInvalidError{Message: errorResponse.Message.Message}
-		case "userAlreadyImpersonated":
-			return nil, &UserAlreadyImpersonatedError{Message: errorResponse.Message.Message}
-		case "userNotImpersonated":
-			return nil, &UserNotImpersonatedError{Message: errorResponse.Message.Message}
-		case "notFound":
-			return nil, &NotFoundError{Message: errorResponse.Message.Message}
-		case "usernameAlreadyTaken":
-			return nil, &UsernameAlreadyTakenError{Message: errorResponse.Message.Message}
-		case "userAlreadyExists":
-			return nil, &UserAlreadyExistsError{Message: errorResponse.Message.Message}
-		case "bearerExpired":
-			return nil, &BearerExpiredError{Message: errorResponse.Message.Message}
-		case "sessionInvalid":
-			return nil, &SessionInvalidError{Message: errorResponse.Message.Message}
-		default:
-			return nil, &UnexpectedError{Message: fmt.Sprintf("Unexpected error.\nType: %v\nMessage: %v", errorResponse.Message.Type, errorResponse.Message.Message)}
-		}
-	}
-
-	return resp.Body, nil
-}
-
-type UnexpectedError struct {
-	Message string
-}
-
-func (e *UnexpectedError) Error() string {
-	return e.Message
-}
-
-type ConfigError struct {
-	Message string
-}
-
-func (e *ConfigError) Error() string {
-	return e.Message
-}
-
-type BearerMalformedError struct {
-	Message string
-}
-
-func (e *BearerMalformedError) Error() string {
-	return e.Message
-}
-
-type UserDeleteFailedError struct {
-	Message string
-}
-
-func (e *UserDeleteFailedError) Error() string {
-	return e.Message
-}
-
-type PasswordInvalidError struct {
-	Message string
-}
-
-func (e *PasswordInvalidError) Error() string {
-	return e.Message
-}
-
-type UserAlreadyImpersonatedError struct {
-	Message string
-}
-
-func (e *UserAlreadyImpersonatedError) Error() string {
-	return e.Message
-}
-
-type UserNotImpersonatedError struct {
-	Message string
-}
-
-func (e *UserNotImpersonatedError) Error() string {
-	return e.Message
-}
-
-type NotFoundError struct {
-	Message string
-}
-
-func (e *NotFoundError) Error() string {
-	return e.Message
-}
-
-type UsernameAlreadyTakenError struct {
-	Message string
-}
-
-func (e *UsernameAlreadyTakenError) Error() string {
-	return e.Message
-}
-
-type UserAlreadyExistsError struct {
-	Message string
-}
-
-func (e *UserAlreadyExistsError) Error() string {
-	return e.Message
-}
-
-type BearerExpiredError struct {
-	Message string
-}
-
-func (e *BearerExpiredError) Error() string {
-	return e.Message
-}
-
-type SessionInvalidError struct {
-	Message string
-}
-
-func (e *SessionInvalidError) Error() string {
-	return e.Message
+	return res, nil
 }

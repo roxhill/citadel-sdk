@@ -8,28 +8,42 @@ Once you have set up the client you can call any method on this client. Below is
 package main
 
 import (
-	"fmt"
-	citadel "github.com/everlutionsk/go/qzila/sdk/citadel_admin"
+  "fmt"
+  "os"
+  citadel "github.com/everlutionsk/go/qzila/sdk/citadel_admin"
 )
 
+var client citadel.Client
+
+func init() {
+  // Set up the client
+  client := citadel.NewClient(&citadel.ClientConfig{
+    BaseURL:      "<URL of your Citadel instance>",
+    ClientSecret: "<provided by Citadel tech team>",
+  })
+}
+
 func main() {
-	// set up the client
-	client := citadel.NewClient(&citadel.ClientConfig{
-		BaseUrl:      "https://{id}.execute-api.{region}.amazonaws.com/{stage}/admin/v1",
-		ApiKey:       "will be provided to you",
-		PreSharedKey: "will be provided to you",
-	})
+  // Fetch user by ID.
+  user, err := client.GetUser(&citadel.GetUserRequest{
+    UserID: "<someUserID>",
+  })
 
-    // example of getting user info by id
-	response, err := client.GetUser(&citadel.GetUserRequest{
-		UserId: "some user id",
-	})
+  if err != nil {
+    // You can check the error against a broad selection of possible errors returned
+    // by Citadel, for example:
+    if errors.Is(err, citadel.ErrNotFound) {
+      fmt.Println("User not found")
+      os.Exit(1)
+    }
 
-	if err != nil {
-		fmt.Printf("Failed: %v\n", err)
-		return
-	}
-	fmt.Printf("Response:\n\n")
-	fmt.Printf("%+v\n", response)
+    // Handle unknown errors.
+    fmt.Printf("Unexpected error: %s\n", err)
+    os.Exit(1)
+  }
+
+  // Now you can access user data.
+  fmt.Printf("User:\n\n")
+  fmt.Printf("%+v\n", user)
 }
 ```
