@@ -1,4 +1,4 @@
-module github.com/roxhill/citadel-sdk
+module github.com/roxhill/citadel-sdk/v2
 
 go 1.19
 
