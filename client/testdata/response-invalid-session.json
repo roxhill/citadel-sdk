@@ -1,0 +1,72 @@
+{
+  "resolvedAt": "2025-04-24T09:14:29.541Z",
+  "resolutionId": "BjBVXfffI4AliYCvzaGAdQ",
+  "isValid": true,
+  "setCookies": null,
+  "invalid": {
+    "session": {
+      "resolvedAt": "2025-04-24T09:14:29.541Z",
+      "isValid": false,
+      "invalid": {
+        "id": "NOykx8JdavhLFBYzwY1epmtHfLy1anlVFuMK7-nlXh0",
+        "identities": [
+          {
+            "id": "64d3ba00f20bfdaec54eb39e",
+            "assignedAt": "2025-04-23T18:15:10.441Z",
+            "data": {
+              "impersonated": true
+            }
+          },
+          {
+            "id": "64d3aef660fd5010c3be3956",
+            "assignedAt": "2025-04-09T16:38:18.204Z",
+            "data": {}
+          }
+        ],
+        "issuedAt": "2025-04-09T16:38:18.204Z",
+        "refreshedAt": "2025-04-24T09:00:06.519Z",
+        "maxAge": 2592000,
+        "deviceId": "mNT8hkpsWOeluNtsJ5ZgByHgUmcf201rP0j9aCaEuhdVY1NSA1eQQkq2cJPBjw4kKH8-6LxdTybrOol9PdZJUA"
+      }
+    },
+    "sessionToken": {
+      "resolvedAt": "2025-04-24T09:14:29.541Z",
+      "isValid": true,
+      "valid": {
+        "id": "74RVs2Ok6nCwWVh0GU3VBn3rfqefB3NJ-qvQos-qzwU",
+        "audience": "roxhill.adminv2",
+        "sessionId": "NOykx8JdavhLFBYzwY1epmtHfLy1anlVFuMK7-nlXh0",
+        "issuedAt": "2025-04-23T18:13:07.349Z",
+        "maxAge": 2592000,
+        "replaceAfter": 86400,
+        "validAfterReplacementFor": 600
+      }
+    },
+    "persistentData": [
+      {
+        "identityId": "64d3ba00f20bfdaec54eb39e",
+        "data": {
+          "customer_id": "64ba9b8212efe3472ddb16f5",
+          "firstname": "Jane",
+          "lastname": "Doe",
+          "legacy_customer_id": "1",
+          "legacy_id": "222222",
+          "roles": "[\"CUSTOMER_USER\",\"CUSTOMER_ADMIN\",\"USER\",\"analyticsCustomer\",\"USER_ADMIN\"]",
+          "status": "active"
+        }
+      },
+      {
+        "identityId": "64d3aef660fd5010c3be3956",
+        "data": {
+          "customer_id": "64ba9b8212efe3472ddb16f5",
+          "firstname": "John",
+          "lastname": "Smith",
+          "legacy_customer_id": "2",
+          "legacy_id": "111111",
+          "roles": "[\"PLATFORM_SUPER_ADMIN\",\"PLATFORM_ADMIN\",\"CUSTOMER_USER\",\"CUSTOMER_ADMIN\",\"USER\",\"analyticsCustomer\",\"monitoringCustomer\",\"SUPER_ADMIN\",\"ADMIN\",\"USER_ADMIN\"]",
+          "status": "active"
+        }
+      }
+    ]
+  }
+}

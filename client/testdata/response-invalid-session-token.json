@@ -1,0 +1,77 @@
+{
+  "resolvedAt": "2025-04-24T09:14:29.541Z",
+  "resolutionId": "BjBVXfffI4AliYCvzaGAdQ",
+  "setCookies": [],
+  "isValid": false,
+  "invalid": {
+    "session": {
+      "resolvedAt": "2025-04-24T09:14:29.541Z",
+      "isValid": true,
+      "valid": {
+        "id": "NOykx8JdavhLFBYzwY1epmtHfLy1anlVFuMK7-nlXh0",
+        "identities": [
+          {
+            "id": "64d3ba00f20bfdaec54eb39e",
+            "assignedAt": "2025-04-23T18:15:10.441Z",
+            "data": {
+              "impersonated": true
+            }
+          },
+          {
+            "id": "64d3aef660fd5010c3be3956",
+            "assignedAt": "2025-04-09T16:38:18.204Z",
+            "data": {}
+          }
+        ],
+        "issuedAt": "2025-04-09T16:38:18.204Z",
+        "refreshedAt": "2025-04-24T09:00:06.519Z",
+        "maxAge": 2592000,
+        "deviceId": "mNT8hkpsWOeluNtsJ5ZgByHgUmcf201rP0j9aCaEuhdVY1NSA1eQQkq2cJPBjw4kKH8-6LxdTybrOol9PdZJUA"
+      }
+    },
+    "sessionToken": {
+      "resolvedAt": "2025-04-24T09:14:29.541Z",
+      "isValid": false,
+      "reason": "invalid_replaced",
+      "invalid": {
+        "id": "VfSECxEqBxE8xKoXeOt3rRX2mSrXcSJUCjkgWK_suvQ",
+        "audience": "roxhill.adminv2",
+        "sessionId": "NOykx8JdavhLFBYzwY1epmtHfLy1anlVFuMK7-nlXh0",
+        "issuedAt": "2025-04-23T18:13:07.349Z",
+        "maxAge": 2592000,
+        "replaceAfter": 86400,
+        "replaced": {
+          "at": "2025-04-23T18:13:07.349Z",
+          "id": "74RVs2Ok6nCwWVh0GU3VBn3rfqefB3NJ-qvQos-qzwU"
+        },
+        "validAfterReplacementFor": 600
+      }
+    },
+    "persistentData": [
+      {
+        "identityId": "64d3ba00f20bfdaec54eb39e",
+        "data": {
+          "roles": "[\"USER\",\"analyticsCustomer\",\"monitoringCustomer\",\"SUPER_ADMIN\",\"ADMIN\",\"analyticsAdmin\",\"processing\",\"switchboard\",\"twitterAnalysis\",\"manualFeed\",\"TAGGER\"]",
+          "customer_id": "64ba9b8212efe3472ddb16f5",
+          "legacy_customer_id": "2",
+          "legacy_id": "34212",
+          "firstname": "Quality",
+          "lastname": "Analyst",
+          "status": "active"
+        }
+      },
+      {
+        "identityId": "64d3aef660fd5010c3be3956",
+        "data": {
+          "legacy_customer_id": "2",
+          "roles": "[\"PLATFORM_SUPER_ADMIN\",\"PLATFORM_ADMIN\",\"CUSTOMER_USER\",\"CUSTOMER_ADMIN\",\"USER\",\"analyticsCustomer\",\"monitoringCustomer\",\"SUPER_ADMIN\",\"ADMIN\",\"USER_ADMIN\"]",
+          "customer_id": "64ba9b8212efe3472ddb16f5",
+          "firstname": "Michal",
+          "lastname": "Mieluch",
+          "status": "active",
+          "legacy_id": "20368"
+        }
+      }
+    ]
+  }
+}
